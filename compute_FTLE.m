@@ -1,9 +1,9 @@
-function FTLE = compute_FTLE(t0,tf,tStep,flagPlot)
+function FTLE = compute_FTLE(tStart,tStop,d,tStep,flagPlot)
     %% Loading up the data and reshaping for our needs
-%     t0 = 42; tf = 52; d = 2;
-    fileName = '2018_09_b_2018091000_2018090500';
+%     tStart = 42; tStop = 52; d = 2;
+    fileName = ['depth',num2str(d),'m_',char('f'*(tStart<tStop)+'b'*(tStart>tStop)),'_',num2str(tStart),'_',num2str(tStop),'_',num2str(tStep)];
     load(['Trajectories_FTLE/',fileName, '.mat']);
-
+    
     % Particles and auxiliary points
     x0 = reshape(x(1,:),5,size(x,2)/5);
     y0 = reshape(y(1,:),5,size(y,2)/5);
@@ -44,7 +44,7 @@ function FTLE = compute_FTLE(t0,tf,tStep,flagPlot)
     c22 = f12.*f12 + f22.*f22;
     
     % Eigenvalues and FTLE
-    timeInterval = tf-t0; eigs = zeros(2,length(c11));
+    timeInterval = tStop-tStart; eigs = zeros(2,length(c11));
     %% Eigenvalues from closed from expression
     %{
     eig1 = reshape(((c11+c22)+sqrt((c11+c22).^2-4*(c11.*c22-c12.*c21)))/2,lyP,lxP);
@@ -67,12 +67,12 @@ function FTLE = compute_FTLE(t0,tf,tStep,flagPlot)
     % Identify points with non-positive eigenvalues - as a result of numerial errors
     eig1 = eigs(1,:);           eig2 = eigs(2,:);
     indEig = find(eig1>0 & eig2>0);
-    eig1pos = eig1(indEig);     eig2pos = eig2(indEig);
+    eig1pos = eig1(indEig);    eig2pos = eig2(indEig);
     fprintf('Number of points with non-positive eigenvalues: %.0f out of %.0f\n',length(eig1)-length(indEig),length(eig1));
     
     % FTLE and dilation rate, and corresponding grids
-    FTLE = log(max(eig1,eig2))/(2*abs(seconds(timeInterval)));
-    DilR = log(eig1pos.*eig2pos)/abs(seconds(timeInterval));
+    FTLE = log(max(eig1,eig2))/(2*abs(timeInterval));
+    DilR = log(eig1pos.*eig2pos)/abs(timeInterval);
     xFTLE = XP0;                yFTLE = YP0;
     xDilR = XP0(indEig);        yDilR = YP0(indEig);
     
@@ -84,11 +84,11 @@ function FTLE = compute_FTLE(t0,tf,tStep,flagPlot)
     if flagPlot == 1
     fig1 = figure; scatter(xFTLE,yFTLE,5,FTLE,'filled'); colorbar; caxis([0 max(max(FTLE))]);
     axis tight; xlabel('$x_1$','Interpreter','Latex'); ylabel('$x_2$','Interpreter','Latex');
-%     title(['FTLE: $t_0 = ',num2str(tStart),'$, $t_f = ',num2str(tStop),'$, $d = ',num2str(d),'m$'], 'Interpreter','Latex');
+    title(['FTLE: $t_0 = ',num2str(tStart),'$, $t_f = ',num2str(tStop),'$, $d = ',num2str(d),'m$'], 'Interpreter','Latex');
 
     fig2 = figure; scatter(xDilR,yDilR,5,DilR,'filled'); colorbar; colormap('bluewhitered');
     axis tight; xlabel('$x_1$','Interpreter','Latex'); ylabel('$x_2$','Interpreter','Latex');
-%     title(['DilR: $t_0 = ',num2str(tStart),'$, $t_f = ',num2str(tStop),'$, $d = ',num2str(d),'m$'], 'Interpreter','Latex');
+    title(['DilR: $t_0 = ',num2str(tStart),'$, $t_f = ',num2str(tStop),'$, $d = ',num2str(d),'m$'], 'Interpreter','Latex');
     
     print(fig1,'-r400','-dpng',fullfile(dirFig, [fileName, '.png'])); close(fig1);
     print(fig2,'-r400','-dpng',fullfile(dirFig, [fileName, '.png'])); close(fig2);

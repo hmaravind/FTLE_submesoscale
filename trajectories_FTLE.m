@@ -1,36 +1,33 @@
 clear; close all; clc;
-%% Initializations
-% Time for which data is available
-% Data is currently available for y = 2018; m = 9; d = 1:30; H = 0:3:21;
-tMin = datetime([2018,09,01,00,00,00]);
-tMax = datetime([2018,09,30,21,00,00]);   
-
-% Input time-window for analysis, start time (tStart) and end time (tStop).
-% tStart and tStop - format: [yyyy,mm,dd,HH,MM,SS]; should lie between tMin and tMax
-timeWindow = -days(5);
-% tStart = datetime([2018,09,10,00,00,00]);
-
-y = 2018; m = 9; d = 10:1:20; H = 0;
-tStart = repmat(datetime([0,0,0]),(length(y)*length(m)*length(d)*length(H)),1);
-for i = 1:length(d)
-    tStart(i) = datetime([y,m,d(i),H,0,0]);
-end
-tStop = tStart + timeWindow;
-i = 1; tStart = tStart(i); tStop = tStop(i);
-if(min(min([tStart;tStop]>tMax)) || min(min([tStart;tStop]<tMin)))
-    disp('No data for the times specified'); return
-else
-    disp([tStart,tStop]')
-end
-
+%% Start and end times, depth
+d = 2;                  % depth
+tMin = 40; tMax = 80;   % minimum and maximum time (hours) for which data is available
+nt = 6;                 % number of time windows with distinct tStart
 flag = 0;               % 0 to use particle grid defined in function; 1 to define another
-tStep = seconds(hours(3))/30*((tStop-tStart)/abs(tStop-tStart));
+
+tStart = [linspace(tMin,tMax,nt+1) linspace(tMax,tMin,nt+1)];
+tStart = tStart([1:end/2-1, end/2+1:end-1]);
+tStop = [tMax*ones(1,nt) tMin*ones(1,nt)];
+dt = [(tStart(2)-tStart(1))*ones(1,nt), (tStart(nt+2)-tStart(nt+1))*ones(1,nt)];
+
+tStart = [tMin:0.25:tMax]; nt = length(tStart); tStart = [tStart fliplr(tStart)];
+dt = [10*ones(1,nt) -10*ones(1,nt)];
+tStop = tStart+dt;
+
+dt = [1 2 3 4 5 6 -1 -2 -3 -4 -5 -6 -15];
+tStop = [ones(1,length(dt)-1)*80 70];
+tStart = tStop-dt;
+
+tStart = 80; tStop = 70; dt = -10; d = 2;
+
+tStep = 300*((tStop-tStart)/abs(tStop-tStart));
+disp([tStart; tStop; dt; tStep]);
 
 %% Trajectory extraction and FTLE computation
 for i = 1:length(tStart)
-    disp(['tStart = ',datestr(tStart(i),0), ', tStop = ', datestr(tStop(i),0)]);
-    trajectory_calculation_periodic(tStart(i),tStop(i),timeWindow,tStep(i),flag);      % Trajectory extraction
-    compute_FTLE(tStart(i),tStop(i),tStep,0);                                    % FTLE computation
+    display(['tStart = ', num2str(tStart(i)), ', tStop = ', num2str(tStop(i)), ', d = ', num2str(d)]);
+    trajectory_calculation_periodic(tStart(i),tStop(i),d,dt(i),tStep(i),flag);     % Trajectory extraction
+    compute_FTLE(tStart(i),tStop(i),d,tStep(i),0);                        % FTLE computation
 end
 
 %% FTLE computation
